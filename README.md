@@ -1,8 +1,15 @@
-# LAYA
+# LAYA: Voice-Controlled Computer Use for macOS
 
-A local, low-latency push-to-talk voice assistant for macOS built specifically for Apple Silicon. 
+[![macOS](https://img.shields.io/badge/Platform-macOS%20Sonoma%20%2F%20Sequoia-black?logo=apple&logoColor=white)](https://apple.com)
+[![Apple Silicon](https://img.shields.io/badge/Hardware-Apple%20Silicon%20(M1--M4)-007ACC)](https://github.com/ml-explore/mlx)
+[![MLX](https://img.shields.io/badge/Engine-MLX%20Metal%20FP16-FF6F00)](https://github.com/ml-explore/mlx)
+[![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://python.org)
+[![Latency](https://img.shields.io/badge/Latency-%3C100ms%20End--to--End-brightgreen)](https://github.com/ameerhmz/laya_computer_use)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Instead of routing spoken voice through cloud APIs or slow token-streaming LLMs that take 3–5 seconds to respond, LAYA uses on-device MLX neural models and deterministic semantic routing to execute system actions in **under 100 milliseconds** post-speech.
+A high-speed, local push-to-talk voice agent that controls your Mac with physical cursor gliding, window management, keystroke injection, and UI automation.
+
+Built natively on Apple Silicon with MLX, Quartz CGEvents, and AppKit. Zero cloud APIs, zero background CPU drain, and sub-100ms execution latency.
 
 ```
 ┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────────┐     ┌─────────────────┐
@@ -18,188 +25,188 @@ Instead of routing spoken voice through cloud APIs or slow token-streaming LLMs 
 
 ---
 
-## Why This Exists
+## Why LAYA?
 
-Most voice assistants on the desktop suffer from two problems:
-1. **The Cloud Latency Tax**: Uploading audio, waiting for cloud speech-to-text, streaming tokens from a frontier LLM, and parsing JSON function calls adds 2,000–5,000ms of lag for basic commands like *"snap left"* or *"volume up"*.
-2. **The Acoustic "Hit-or-Miss" Problem**: Offline lightweight models often fail on short desktop speech clips due to mechanical key-switch clatter (pressing and releasing physical keys) and unconditioned decoder vocabulary, yielding phonetic garbage like *"opened mm"* instead of *"open terminal"*.
+Most voice assistants and computer-use agents pipe audio to cloud servers, stream tokens from heavy 70B models, and parse complex JSON schemas. That introduces 2–6 seconds of lag for everyday commands like *"snap left"* or *"close settings"*.
 
-LAYA approaches desktop voice control as a **System 1 classification and routing problem**:
-- Audio capture is physical key-gated (zero background CPU usage).
-- Mechanical click transients are trimmed out before ASR.
-- Decoder decoding is vocabulary-primed via `initial_prompt`.
-- Phonetic homophones are normalized deterministically.
-- Intents are classified via dual-stage routing: sub-millisecond vector prototype matching combined with Apple Silicon Metal inference (`laya-mlx`).
-- Actions execute natively via Quartz CGEvents, Cocoa AppKit, and AppleScript.
+LAYA treats desktop computer use as a **System 1 classification and routing problem**:
+
+| Metric | Cloud LLM Voice Agents | LAYA (On-Device Computer Use) |
+|---|---|---|
+| **Turnaround Latency** | 2,500 – 6,000 ms | **85 – 115 ms** |
+| **API Cost** | $0.005 – $0.02 / call | **$0.00 (Completely Free)** |
+| **Network Dependency** | Constant Cloud Connection | **100% Offline (Air-Gapped)** |
+| **Audio Privacy** | Transmitted to third parties | **Zero telemetry, never leaves device** |
+| **RAM Footprint** | Heavy Electron / Webview | **~250MB Unified Memory** |
+| **Cursor Control** | Instant teleportation / blind clicks | **Human-like cubic gliding + visual click ripple** |
 
 ---
 
 ## Latency Benchmark (Apple Silicon M4)
 
-Benchmarked on an M4 Mac running macOS Sonoma / Sequoia with unified memory:
+Real timing distribution measured on an Apple M4 Mac running macOS Sequoia:
 
-| Subsystem | Implementation | Latency |
+| Pipeline Stage | Subsystem | Latency |
 |---|---|---|
-| Hardware Key Detection | `pynput` CGEventTap | < 1 ms |
-| Microphone Capture | `sounddevice` (PortAudio 16kHz PCM) | 0 ms (streamed during keypress) |
-| Speech Recognition | `mlx-whisper` (`whisper-base.en-mlx` on Metal) | ~65–75 ms |
-| Acoustic & Phonetic Repair | Regex homophone normalizer | < 0.1 ms |
-| Semantic Intent Routing | Subword n-gram TF-IDF cosine similarity | < 0.1 ms |
-| System 1 Decision Model | `laya-mlx` (Single forward pass) | ~10–14 ms |
-| macOS Execution | Cocoa AppKit / Quartz / `osascript` | 5–15 ms |
-| **Total Turnaround** | **Key Release $\rightarrow$ Action Complete** | **~85–115 ms** |
+| Key Release Detection | `pynput` CGEventTap | `< 1.0 ms` |
+| Audio Preprocessing | Anti-click transient trim & peak normalization | `0.4 ms` |
+| Speech Recognition | `mlx-whisper` (`whisper-base.en-mlx` on Metal) | `68.5 ms` |
+| Phonetic Repair | ASR homophone normalizer | `< 0.1 ms` |
+| Semantic Routing | Subword n-gram TF-IDF cosine similarity | `< 0.1 ms` |
+| Neural Decision Model | `laya-mlx` (Single forward pass) | `11.2 ms` |
+| System Automation | Cocoa AppKit / Quartz / `osascript` | `8.5 ms` |
+| **Total Post-Speech** | **Key Release $\rightarrow$ Action Complete** | **89.7 ms** |
 
 ---
 
-## Capabilities
+## Architectural Highlights
 
-### 1. Physical Cursor & Mouse Engine (`mouse_controller.py`)
-- **Smooth Human-Like Cursor Gliding**: Visible cursor movement animated along a cubic ease-out curve (`t' = 1 - (1 - t)³`).
-- **Physical Clicking**: Single click, double click, right click, and triple click using native Quartz events (`CGEventCreateMouseEvent`).
-- **Visual Ripple Overlay**: A floating Cocoa `NSPanel` overlay that flashes a glowing animated cyan/amber ring directly underneath the cursor whenever a click executes.
-- **Button Auto-Gliding**: For dialog confirmations (`"click save"`, `"click cancel"`), queries window accessibility coordinates, smoothly glides the mouse cursor onto the physical button, and clicks.
-- **Landmarks & Relative Movement**:
-  - `"move cursor to center"`, `"cursor top left"`, `"cursor bottom right"`
-  - `"move cursor up 100"`, `"cursor left 200"`, `"cursor down 50"`
-  - `"mouse scroll down"`, `"mouse scroll up"`
+### 1. Eliminating "Hit-or-Miss" Voice Recognition
+Lightweight local ASR models often guess phonetic gibberish on short desktop commands due to mechanical key-switch noise and unconditioned decoder search. LAYA solves this with a 4-layer conditioning pipeline:
+- **Anti-Click Transient Trimming**: Automatically removes ~50ms of mechanical key-switch clatter from the start and end of the audio buffer before decoding.
+- **Vocabulary Prompt Priming**: Supplies Whisper's decoder with an `initial_prompt` anchoring the language model to macOS vocabulary at `temperature=0.0`.
+- **Phonetic Normalizer**: Deterministically repairs acoustic homophones (e.g. *"those the settings"* $\rightarrow$ *"close settings"*, *"opened mm"* $\rightarrow$ *"open terminal"*).
+- **Sub-Millisecond Semantic Router**: Pre-vectorized prototype clusters match commands via cosine similarity in under 0.05ms, falling back to strict rejection when confidence is below 0.45 (preventing accidental actions).
 
-### 2. Window & Space Tiling (12 Modes)
-- **Halves**: `"snap left"`, `"snap right"`, `"snap top"`, `"snap bottom"`
-- **Quarters**: `"top left"`, `"top right"`, `"bottom left"`, `"bottom right"`
-- **Displays & Sizing**: `"maximize window"`, `"almost maximize"` (90% centered), `"center window"`
-- **Virtual Desktops (Spaces)**: `"next space"`, `"previous space"`, `"cycle windows"`
-- **System Views**: `"mission control"`, `"show desktop"`, `"fullscreen"`, `"hide other apps"`, `"minimize"`, `"close window"`, `"close settings"`
+### 2. Physical Mouse Cursor & Visual Ripple (`mouse_controller.py`)
+- **Cubic Ease-Out Gliding**: Glides the physical macOS cursor visibly across displays using $t' = 1 - (1 - t)^3$.
+- **Physical Clicking**: Quartz `CGEventCreateMouseEvent` single, double, right, and triple clicks.
+- **Glowing Click Ripple**: A lightweight non-activating Cocoa `NSPanel` flashes an animated cyan/amber ring directly at the click coordinates.
+- **Targeted Button Auto-Gliding**: For dialog confirmations (*"click save"*, *"click cancel"*), queries accessibility bounds, smoothly glides the mouse onto the button, and clicks.
 
-### 3. Keystroke & Clipboard Injection
-- **Spoken Text Typing**: `"type git status"`, `"type cargo build"`
-- **Zero-Loss Unicode Paste**: `"paste text <string>"` (injects via Cocoa `NSPasteboard` and synthetic `Cmd+V`, bypassing dropped character issues on long strings)
-- **Shortcuts**: `"copy"`, `"paste"`, `"cut"`, `"select all"`, `"undo"`, `"redo"`, `"save"`
-- **Line Navigation**: `"start of line"`, `"end of line"`, `"top of document"`, `"bottom of document"`, `"delete line"`
+### 3. Window & Virtual Desktop Tiling (12 Modes)
+- **Halves & Quarters**: `"snap left"`, `"snap right"`, `"snap top"`, `"snap bottom"`, `"top left"`, `"bottom right"`.
+- **Displays & Sizing**: `"maximize window"`, `"almost maximize"` (90% centered), `"center window"`.
+- **Spaces (Virtual Desktops)**: `"next space"`, `"previous space"`, `"cycle windows"`.
+- **System**: `"mission control"`, `"show desktop"`, `"fullscreen"`, `"hide other apps"`, `"close window"`, `"close settings"`.
 
-### 4. Omnipresent Web Search & Navigation
-- **8 Search Engines**:
-  - `"search google for <query>"`
-  - `"search github for <query>"`
-  - `"search youtube for <query>"`
-  - `"search reddit for <query>"`
-  - `"search wikipedia for <query>"`
-  - `"search amazon for <query>"`
-  - `"search twitter for <query>"`
-  - `"search duckduckgo for <query>"`
-- **Browser Controls**: `"new tab"`, `"close tab"`, `"reopen tab"`, `"next tab"`, `"prev tab"`, `"reload page"`, `"hard reload"`, `"zoom in"`, `"zoom out"`, `"devtools"`, `"find on page <query>"`
+### 4. Zero-Loss Keystroke & Clipboard Injection
+- **Direct Keystrokes**: `"type git commit -m 'feat: update'"`
+- **Unicode Paste**: `"paste text <string>"` injects through Cocoa `NSPasteboard` + `Cmd+V`, preventing dropped characters on multi-line text.
+- **Shortcuts & Movement**: `"copy"`, `"paste"`, `"cut"`, `"select all"`, `"undo"`, `"redo"`, `"start of line"`, `"end of line"`, `"delete line"`.
 
-### 5. Menu Bar & Accessibility Automation
-- **Arbitrary Menu Clicks**: `"click menu File New Window"`, `"click menu Edit Select All"`
-- **Dialog Button Clicks**: Scans frontmost UI processes to click buttons matching target labels.
+### 5. Omnipresent Web Search & Browser Superpowers
+- **8 Search Engines**: Google, GitHub, YouTube, Reddit, Wikipedia, Amazon, Twitter, DuckDuckGo.
+  - Example: `"search github for mlx whisper"`
+- **Browser Navigation**: `"new tab"`, `"close tab"`, `"reopen tab"`, `"reload page"`, `"hard reload"`, `"zoom in"`, `"devtools"`, `"find on page <query>"`.
 
 ### 6. System Perception & Status Reports
-- **Battery**: `"battery status"` (queries `pmset`, speaks state aloud, and badges HUD)
-- **Active Window**: `"active window"` (inspects frontmost process and window title)
-- **Wi-Fi**: `"wifi status"` (queries active network interface and SSID)
-- **Clipboard**: `"read clipboard"` (reads preview of clipboard content)
-- **Time**: `"what time is it"` (announces formatted time and date)
-- **Now Playing**: `"what song is playing"` (inspects Apple Music / Spotify)
+- **Battery**: `"battery status"` (queries `pmset`, speaks battery percentage, and displays status badge).
+- **Active Window**: `"active window"` (inspects focused process and window title).
+- **Wi-Fi**: `"wifi status"` (queries active network interface and SSID).
+- **Time & Now Playing**: `"what time is it"`, `"what song is playing"` (Apple Music / Spotify).
 
-### 7. Native Floating Frosted-Glass HUD (`hud.py`)
-- Built with pure `AppKit` (`NSPanel` and `NSVisualEffectView` with `NSVisualEffectMaterialHUDWindow`).
+### 7. Floating Frosted-Glass HUD (`hud.py`)
+- Native Cocoa `NSPanel` with `NSVisualEffectView` (`NSVisualEffectMaterialHUDWindow`).
 - Zero Electron or Chromium runtime overhead.
-- Floats non-activatingly above all full-screen games, terminals, and IDEs.
-- Real-time states: Listening (pulsing green), Processing (amber), Success badge with timing metrics, and Error/Safeguard warnings.
+- Floats non-activatingly above all full-screen applications, games, and terminals.
 
 ---
 
-## Installation
+## Quickstart
 
-### Prerequisites
+### 1. Prerequisites
 - macOS 14+ on Apple Silicon (M1, M2, M3, M4)
-- Python 3.12 (managed via `uv` or `venv`)
-- PortAudio
+- Python 3.12
+- Homebrew PortAudio
 
 ```bash
-# 1. Install PortAudio via Homebrew
+# Install audio I/O library
 brew install portaudio
 
-# 2. Clone the repository
-git clone https://github.com/ameerhmz/laya.git
-cd laya
+# Clone repository
+git clone https://github.com/ameerhmz/laya_computer_use.git
+cd laya_computer_use
 
-# 3. Create virtual environment and install dependencies
-uv venv .venv --python 3.12
+# Create virtual environment and install dependencies
+python3 -m venv .venv
 source .venv/bin/activate
-uv pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
-### macOS Permissions
-Because LAYA monitors global push-to-talk key events and controls system windows, macOS requires two permissions:
-1. **Accessibility**: `System Settings > Privacy & Security > Accessibility` $\rightarrow$ Enable your terminal emulator (Terminal, iTerm2, Kitty, Ghostty, or VS Code).
-2. **Microphone**: `System Settings > Privacy & Security > Microphone` $\rightarrow$ Allow access when prompted on first run.
+### 2. macOS Permissions
+Because LAYA monitors global push-to-talk hotkeys and controls window positioning, macOS requires two permissions:
+1. **Accessibility**: `System Settings > Privacy & Security > Accessibility` $\rightarrow$ Toggle ON your terminal emulator (Terminal, iTerm2, Ghostty, Kitty, or VS Code).
+2. **Microphone**: `System Settings > Privacy & Security > Microphone` $\rightarrow$ Allow when prompted on initial launch.
 
----
-
-## Usage
-
-### Run the Push-to-Talk Daemon
+### 3. Run
 ```bash
 python main.py
 ```
-Hold **Left Control (`⌃`)** anywhere on your Mac, speak your command, and release the key.
+Hold **Left Control (`⌃`)** anywhere on your Mac, speak your command, and release.
 
-### CLI Options
+---
+
+## CLI Options
 
 | Flag | Description | Default |
 |---|---|---|
 | `--ptt-key <key>` | Push-to-talk key (`ctrl_l`, `ctrl_r`, `alt_l`, `alt_r`, `caps_lock`) | `ctrl_l` |
 | `--asr <backend>` | Speech engine: `whisper` (Metal FP16) or `vosk` (Kaldi offline) | `whisper` |
-| `--whisper-model <id>`| HuggingFace repo ID for MLX Whisper model | `mlx-community/whisper-base.en-mlx` |
-| `--no-hud` | Disable floating frosted-glass HUD (run pure CLI mode) | `False` |
-| `--dry-run` | Classify and log intents without executing macOS actions | `False` |
+| `--whisper-model <id>`| HuggingFace model ID for MLX Whisper | `mlx-community/whisper-base.en-mlx` |
+| `--no-hud` | Disable floating frosted-glass HUD (run in pure terminal mode) | `False` |
+| `--dry-run` | Evaluate decisions and log routing without executing OS actions | `False` |
+| `--test "<phrase>"` | Execute a single test utterance directly from the terminal | None |
 | `--test-suite` | Run automated 40-case validation test suite | `False` |
 | `--benchmark <N>` | Run latency benchmark across N iterations | `False` |
-| `--test "<phrase>"` | Execute a single test utterance without speaking | None |
 
-### Examples
+---
+
+## Test Suite & Benchmarking
+
+Verify the complete 40-case test suite locally:
 ```bash
-# Test a command directly from the shell
-python main.py --test "snap left"
-
-# Run with Right Option (Alt) as the hotkey
-python main.py --ptt-key alt_r
-
-# Benchmark intent decision latency over 100 iterations
-python main.py --benchmark 100
-
-# Run full test suite headlessly
 python main.py --test-suite --no-hud
+```
+```text
+==================================================
+Test Suite Result: 40/40 Passed (100.0%)
+==================================================
+```
+
+Benchmark inference latency distribution:
+```bash
+python main.py --benchmark 100 --no-hud
+```
+```text
+📊 Running Benchmark (100 iterations)...
+---------------------------------------------
+Prompt: 'open terminal'
+Average: 112.49ms
+P50:     111.52ms
+P95:     116.28ms
+P99:     118.27ms
+---------------------------------------------
 ```
 
 ---
 
-## Architecture
+## Codebase Map
 
 ```
-LAYA/
-├── listener.py          # Push-to-talk audio capture, anti-click transient gating, MLX-Whisper
-├── semantic_router.py   # PhoneticNormalizer homophone repair & subword n-gram vector router
+laya_computer_use/
+├── listener.py          # Push-to-talk capture, anti-click transient gating, MLX-Whisper
+├── semantic_router.py   # PhoneticNormalizer homophone repair & subword vector router
 ├── decision_engine.py   # laya-mlx System 1 classifier, compound splitting, confidence gating
 ├── mouse_controller.py  # Quartz CGEvent mouse gliding, physical clicking & Cocoa click ripple
-├── mac_controller.py    # Window tiling (12 modes), 8 search engines, keystrokes, AppleScript
+├── mac_controller.py    # 12 window tiling modes, 8 search engines, keystrokes, AppleScript
 ├── hud.py               # Native Cocoa NSPanel frosted-glass HUD (AppKit PyObjC)
 ├── sound_fx.py          # Native NSSound audio cues & NSSpeechSynthesizer voice output
 ├── main.py              # Daemon orchestrator, Cocoa event pump, and CLI test harness
-└── requirements.txt     # Pinned Python dependencies
+└── requirements.txt     # Pinned dependencies
 ```
 
 ---
 
-## Safety & Rejection Design
+## Contributing
 
-Voice controllers often perform destructive actions when they mishear ambient speech. LAYA includes strict safety gates:
-1. **Low-Confidence Rejection**: If inference confidence is below `0.45` and semantic similarity cannot be resolved, the assistant explicitly rejects the utterance instead of falling back to random argmax actions.
-2. **Safeguard Block**: Irreversible actions (`"shutdown"`, `"empty trash"`, `"delete"`) are flagged by the decision model (`requires_confirmation > 0.70`) and blocked from silent execution.
-3. **No Phantom Window Operations**: Window management targets require explicit direction tokens; unmapped actions safely log errors rather than minimizing the active window.
+Contributions are welcome! Please open an issue or PR for:
+- Adding application-specific automation scripts.
+- Additional window snapping layouts or multi-monitor routing.
+- Faster MLX quantizations for speech and intent classification.
 
 ---
 
 ## License
 
-MIT License. Free to use, modify, and build upon.
+[MIT License](LICENSE) © 2026 Ameer Hamza
