@@ -1,0 +1,39 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environment
+.venv/
+env/
+venv/
+ENV/
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# IDE & Editor artifacts
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Local agent & diagnostic files
+.agents/
+scratch/
+*.log
+
+# Audio dumps & temporary capture files
+*.wav
+*.pcm
+*.mp3
+
+# Model caches
+hf_cache/
+.cache/
