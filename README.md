@@ -7,10 +7,6 @@
 [![Latency](https://img.shields.io/badge/Latency-%3C100ms%20End--to--End-brightgreen)](https://github.com/ameerhmz/ghosthand)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-<p align="center">
-  <img src="assets/ghosthand_banner.jpg" alt="Ghosthand Banner" width="100%" />
-</p>
-
 **Ghosthand** (powered by the **LAYA** decision engine) is a high-speed, local push-to-talk voice agent that controls your Mac with physical cursor gliding, window management, keystroke injection, and UI automation.
 
 Built natively on Apple Silicon with MLX, Quartz CGEvents, and AppKit. Zero cloud APIs, zero background CPU drain, and sub-100ms execution latency.
