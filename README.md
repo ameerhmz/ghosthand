@@ -1,13 +1,13 @@
-# LAYA: Voice-Controlled Computer Use for macOS
+# Ghosthand (powered by LAYA)
 
 [![macOS](https://img.shields.io/badge/Platform-macOS%20Sonoma%20%2F%20Sequoia-black?logo=apple&logoColor=white)](https://apple.com)
 [![Apple Silicon](https://img.shields.io/badge/Hardware-Apple%20Silicon%20(M1--M4)-007ACC)](https://github.com/ml-explore/mlx)
 [![MLX](https://img.shields.io/badge/Engine-MLX%20Metal%20FP16-FF6F00)](https://github.com/ml-explore/mlx)
 [![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://python.org)
-[![Latency](https://img.shields.io/badge/Latency-%3C100ms%20End--to--End-brightgreen)](https://github.com/ameerhmz/laya_computer_use)
+[![Latency](https://img.shields.io/badge/Latency-%3C100ms%20End--to--End-brightgreen)](https://github.com/ameerhmz/ghosthand)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A high-speed, local push-to-talk voice agent that controls your Mac with physical cursor gliding, window management, keystroke injection, and UI automation.
+**Ghosthand** (powered by the **LAYA** decision engine) is a high-speed, local push-to-talk voice agent that controls your Mac with physical cursor gliding, window management, keystroke injection, and UI automation.
 
 Built natively on Apple Silicon with MLX, Quartz CGEvents, and AppKit. Zero cloud APIs, zero background CPU drain, and sub-100ms execution latency.
 
@@ -115,8 +115,8 @@ Lightweight local ASR models often guess phonetic gibberish on short desktop com
 brew install portaudio
 
 # Clone repository
-git clone https://github.com/ameerhmz/laya_computer_use.git
-cd laya_computer_use
+git clone https://github.com/ameerhmz/ghosthand.git
+cd ghosthand
 
 # Create virtual environment and install dependencies
 python3 -m venv .venv
@@ -184,7 +184,7 @@ P99:     118.27ms
 ## Codebase Map
 
 ```
-laya_computer_use/
+ghosthand/
 ├── listener.py          # Push-to-talk capture, anti-click transient gating, MLX-Whisper
 ├── semantic_router.py   # PhoneticNormalizer homophone repair & subword vector router
 ├── decision_engine.py   # laya-mlx System 1 classifier, compound splitting, confidence gating
